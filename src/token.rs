@@ -26,11 +26,18 @@ pub fn generate_jwt(user_id: impl ToString, config: &JwtConfig) -> Result<String
 /// Create a signed HS256 JWT with custom extra claims flattened into the
 /// payload.
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// use serde::Serialize;
+/// use axum_jwt_auth::{generate_jwt_with, JwtConfig};
+///
 /// #[derive(Serialize)]
 /// struct Extra { tenant_id: String }
 ///
+/// # fn main() -> Result<(), axum_jwt_auth::AuthError> {
+/// let config = JwtConfig::new("secret");
 /// let token = generate_jwt_with(42, &config, Extra { tenant_id: "acme".into() })?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn generate_jwt_with<E: Serialize>(
     user_id: impl ToString,
@@ -105,12 +112,20 @@ pub fn verify_jwt_any_as<E: DeserializeOwned>(
 
 /// Verify an HS256 JWT, deserializing extra claims into `E`.
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// use serde::Deserialize;
+/// use axum_jwt_auth::{Claims, verify_jwt_as, JwtConfig};
+///
 /// #[derive(Deserialize)]
 /// struct Extra { tenant_id: Option<String> }
 ///
+/// # fn main() -> Result<(), axum_jwt_auth::AuthError> {
+/// # let token = String::new();
+/// let config = JwtConfig::new("secret");
 /// let claims: Claims<Extra> = verify_jwt_as(&token, &config)?;
 /// println!("tenant: {:?}", claims.extra.tenant_id);
+/// # Ok(())
+/// # }
 /// ```
 pub fn verify_jwt_as<E: DeserializeOwned>(
     token: &str,

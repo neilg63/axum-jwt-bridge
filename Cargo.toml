@@ -17,3 +17,4 @@ thiserror = "2"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }
+dotenvy = "0.15"

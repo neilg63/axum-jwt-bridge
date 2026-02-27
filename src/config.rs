@@ -115,7 +115,7 @@ impl JwtConfig {
 
         // Setting USER_MODEL_PATH implies you want the prv claim enforced.
         let (provider, validate_provider) = match std::env::var("USER_MODEL_PATH") {
-            Ok(class) if !class.is_empty() => (ProviderStrategy::laravel(class), true),
+            Ok(class_path) if !class_path.is_empty() => (ProviderStrategy::laravel(class_path), true),
             _ => (ProviderStrategy::None, false),
         };
 

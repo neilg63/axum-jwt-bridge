@@ -1,6 +1,10 @@
+[![Mirror](https://img.shields.io/badge/mirror-github-blue)](https://github.com/neilg63/axum-jwt-auth)
+[![Crates.io](https://img.shields.io/crates/v/axum-jwt-auth.svg)](https://crates.io/crates/axum-jwt-auth)
+[![Docs.rs](https://docs.rs/axum-jwt-auth/badge.svg)](https://docs.rs/axum-jwt-auth)
+
 # axum-jwt-auth
 
-JWT encode/decode for [Axum](https://docs.rs/axum) microservices, compatible with Laravel's `tymon/jwt-auth` and any HS256 JWT issuer.
+JWT encode/decode for [Axum](https://docs.rs/axum) microservices, compatible with any HS256 JWT issuer with an audience claim  as well as Laravel's `tymon/jwt-auth` with a provider claim. This crate lets you keep your current API 
 
 Extracts `user_id: u32` from the `sub` claim. Role-based authorization is the consuming application's responsibility.
 

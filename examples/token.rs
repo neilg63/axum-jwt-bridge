@@ -1,13 +1,18 @@
 //! Generate and verify JWTs from the command line.
 //!
+//! Loads `.env` automatically if present, otherwise reads from the environment.
+//!
 //! ```bash
-//! JWT_SECRET=my-secret cargo run --example token -- generate 42
-//! JWT_SECRET=my-secret cargo run --example token -- verify eyJhbG...
+//! cargo run --example token -- generate 42
+//! cargo run --example token -- verify eyJhbG...
 //! ```
 
 use axum_jwt_auth::{generate_jwt, verify_jwt, JwtConfig};
 
 fn main() {
+    // Load .env if present; silently ignore if absent.
+    dotenvy::dotenv().ok();
+
     let config = JwtConfig::from_env().expect("JWT_SECRET must be set");
 
     let args: Vec<String> = std::env::args().skip(1).collect();

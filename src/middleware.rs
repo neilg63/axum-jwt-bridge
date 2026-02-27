@@ -32,7 +32,7 @@ use crate::token::{verify_jwt_any_as, verify_jwt_as};
 ///
 /// ## With custom extra claims
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use serde::Deserialize;
 /// use axum_jwt_auth::AuthUser;
 ///
