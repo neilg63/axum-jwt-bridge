@@ -1,4 +1,4 @@
-//! # axum-jwt-auth
+//! # axum-jwt-bridge
 //!
 //! JWT encode/decode for [Axum](https://docs.rs/axum) microservices,
 //! compatible with Laravel's `tymon/jwt-auth` and any HS256 JWT issuer.
@@ -10,7 +10,7 @@
 //!
 //! ```rust,no_run
 //! use axum::{routing::get, Extension, Router};
-//! use axum_jwt_auth::{AuthUser, JwtConfig};
+//! use crate::{AuthUser, JwtConfig};
 //!
 //! async fn handler(user: AuthUser) -> String {
 //!     format!("user_id = {}", user.user_id)
@@ -35,7 +35,7 @@
 //!
 //! ```rust
 //! use serde::{Deserialize, Serialize};
-//! use axum_jwt_auth::{Claims, verify_jwt_as, generate_jwt_with, JwtConfig};
+//! use axum_jwt_bridge::{Claims, verify_jwt_as, generate_jwt_with, JwtConfig};
 //!
 //! #[derive(Debug, Clone, Serialize, Deserialize)]
 //! struct MyExtra {
@@ -72,7 +72,7 @@
 //! `prv` validation):
 //!
 //! ```rust,no_run
-//! use axum_jwt_auth::JwtConfig;
+//! use axum_jwt_bridge::JwtConfig;
 //!
 //! // Code-based setup:
 //! let config = JwtConfig::laravel_compat("your-jwt-secret", "App\\Models\\User");

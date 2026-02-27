@@ -1,8 +1,8 @@
 [package]
-name = "axum-jwt-auth"
+name = "axum-jwt-bridge"
 version = "0.1.0"
 edition = "2024"
-description = "JWT encode/decode for Axum, compatible with Laravel's tymon/jwt-auth"
+description = "JWT encode/decode for Axum, compatible compatible with any HS256 JWT issuer with an audience claim  as well as Laravel's `tymon/jwt-auth` with a provider claim"
 license = "MIT"
 keywords = ["axum", "jwt", "authentication", "laravel"]
 

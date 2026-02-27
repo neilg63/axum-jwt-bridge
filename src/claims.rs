@@ -45,7 +45,7 @@ impl<'de> Deserialize<'de> for NoExtraClaims {
 /// ## Default usage (Laravel / no extra claims)
 ///
 /// ```rust
-/// use axum_jwt_auth::Claims;
+/// use axum_jwt_bridge::Claims;
 ///
 /// // Claims is Claims<NoExtraClaims> — unknown fields silently ignored.
 /// fn handle(claims: Claims) {
@@ -57,7 +57,7 @@ impl<'de> Deserialize<'de> for NoExtraClaims {
 ///
 /// ```rust
 /// use serde::{Deserialize, Serialize};
-/// use axum_jwt_auth::Claims;
+/// use axum_jwt_bridge::Claims;
 ///
 /// #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 /// struct MyExtra {

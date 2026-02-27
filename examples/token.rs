@@ -7,7 +7,7 @@
 //! cargo run --example token -- verify eyJhbG...
 //! ```
 
-use axum_jwt_auth::{generate_jwt, verify_jwt, JwtConfig};
+use axum_jwt_bridge::{generate_jwt, verify_jwt, JwtConfig};
 
 fn main() {
     // Load .env if present; silently ignore if absent.

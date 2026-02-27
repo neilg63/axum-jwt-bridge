@@ -28,12 +28,12 @@ pub fn generate_jwt(user_id: impl ToString, config: &JwtConfig) -> Result<String
 ///
 /// ```rust,no_run
 /// use serde::Serialize;
-/// use axum_jwt_auth::{generate_jwt_with, JwtConfig};
+/// use axum_jwt_bridge::{generate_jwt_with, JwtConfig};
 ///
 /// #[derive(Serialize)]
 /// struct Extra { tenant_id: String }
 ///
-/// # fn main() -> Result<(), axum_jwt_auth::AuthError> {
+/// # fn main() -> Result<(), axum_jwt_bridge::AuthError> {
 /// let config = JwtConfig::new("secret");
 /// let token = generate_jwt_with(42, &config, Extra { tenant_id: "acme".into() })?;
 /// # Ok(())
@@ -114,12 +114,12 @@ pub fn verify_jwt_any_as<E: DeserializeOwned>(
 ///
 /// ```rust,no_run
 /// use serde::Deserialize;
-/// use axum_jwt_auth::{Claims, verify_jwt_as, JwtConfig};
+/// use axum_jwt_bridge::{Claims, verify_jwt_as, JwtConfig};
 ///
 /// #[derive(Deserialize)]
 /// struct Extra { tenant_id: Option<String> }
 ///
-/// # fn main() -> Result<(), axum_jwt_auth::AuthError> {
+/// # fn main() -> Result<(), axum_jwt_bridge::AuthError> {
 /// # let token = String::new();
 /// let config = JwtConfig::new("secret");
 /// let claims: Claims<Extra> = verify_jwt_as(&token, &config)?;
