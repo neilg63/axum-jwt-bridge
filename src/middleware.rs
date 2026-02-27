@@ -3,9 +3,9 @@ use http::request::Parts;
 use serde::de::DeserializeOwned;
 
 use crate::claims::{Claims, NoExtraClaims};
-use crate::config::JwtConfig;
+use crate::config::{JwtConfig, MultiJwtConfig};
 use crate::error::AuthError;
-use crate::token::verify_jwt_as;
+use crate::token::{verify_jwt_any_as, verify_jwt_as};
 
 /// Axum extractor: validates the JWT and provides the user ID.
 ///
@@ -66,18 +66,24 @@ where
     type Rejection = AuthError;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let config = parts
-            .extensions
-            .get::<JwtConfig>()
-            .cloned()
-            .ok_or_else(|| {
-                AuthError::ConfigError(
-                    "JwtConfig not found — add `.layer(Extension(config))`".into(),
-                )
-            })?;
-
         let token = extract_bearer(parts)?;
-        let claims = verify_jwt_as::<E>(&token, &config)?;
+
+        // MultiJwtConfig takes precedence; fall back to a single JwtConfig.
+        let claims = if let Some(multi) = parts.extensions.get::<MultiJwtConfig>() {
+            verify_jwt_any_as::<E>(&token, multi)?
+        } else {
+            let config = parts
+                .extensions
+                .get::<JwtConfig>()
+                .cloned()
+                .ok_or_else(|| {
+                    AuthError::ConfigError(
+                        "JwtConfig (or MultiJwtConfig) not found — add `.layer(Extension(config))`"
+                            .into(),
+                    )
+                })?;
+            verify_jwt_as::<E>(&token, &config)?
+        };
 
         let user_id = claims.user_id_u32().ok_or_else(|| {
             AuthError::InvalidSubject(format!("`sub` is not a valid u32: {:?}", claims.sub))

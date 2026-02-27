@@ -3,7 +3,7 @@ use rand::RngExt;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::claims::{Claims, NoExtraClaims};
-use crate::config::JwtConfig;
+use crate::config::{JwtConfig, MultiJwtConfig};
 use crate::error::AuthError;
 
 /// Random alphanumeric `jti`.
@@ -78,6 +78,31 @@ pub fn verify_jwt(token: &str, config: &JwtConfig) -> Result<Claims, AuthError> 
     verify_jwt_as::<NoExtraClaims>(token, config)
 }
 
+/// Try each config in [`MultiJwtConfig`] in order; return the first success.
+///
+/// Intended for services that accept tokens from multiple issuers (e.g. a
+/// Laravel backend and a .NET Core service during a migration).  Each config
+/// is tried independently — a wrong-secret failure on one does not affect
+/// the others.  The last error is returned only if every config fails.
+pub fn verify_jwt_any(token: &str, configs: &MultiJwtConfig) -> Result<Claims, AuthError> {
+    verify_jwt_any_as::<NoExtraClaims>(token, configs)
+}
+
+/// Like [`verify_jwt_any`] but deserializes extra claims into `E`.
+pub fn verify_jwt_any_as<E: DeserializeOwned>(
+    token: &str,
+    configs: &MultiJwtConfig,
+) -> Result<Claims<E>, AuthError> {
+    let mut last_err = AuthError::InvalidToken("no configs provided".into());
+    for config in configs.iter() {
+        match verify_jwt_as::<E>(token, config) {
+            Ok(claims) => return Ok(claims),
+            Err(e) => last_err = e,
+        }
+    }
+    Err(last_err)
+}
+
 /// Verify an HS256 JWT, deserializing extra claims into `E`.
 ///
 /// ```rust,ignore
@@ -144,7 +169,19 @@ mod tests {
         let claims = verify_jwt(&token, &cfg).unwrap();
         assert_eq!(claims.user_id_u32(), Some(42));
         assert_eq!(claims.sub, "42");
-        assert!(claims.prv.is_none()); // JwtConfig::new() defaults to ProviderStrategy::None
+        assert!(claims.prv.is_none());
+    }
+
+    #[test]
+    fn roundtrip_laravel() {
+        use crate::config::ProviderStrategy;
+        let cfg = JwtConfig::new("test-secret")
+            .provider(ProviderStrategy::laravel("App\\Models\\User"));
+        let token = generate_jwt(42u32, &cfg).unwrap();
+        let claims = verify_jwt(&token, &cfg).unwrap();
+        assert_eq!(claims.user_id_u32(), Some(42));
+        assert_eq!(claims.sub, "42");
+        assert!(claims.prv.is_some());
     }
 
     #[test]
@@ -250,6 +287,43 @@ mod tests {
 
         let verifying_cfg = JwtConfig::new("secret"); // no audience check
         assert!(verify_jwt(&token, &verifying_cfg).is_ok());
+    }
+
+    // ── Multi-issuer tests ────────────────────────────────────────────────────
+
+    #[test]
+    fn multi_config_accepts_first_issuer() {
+        use crate::config::MultiJwtConfig;
+        let laravel = JwtConfig::laravel_compat("laravel-secret", "App\\Models\\User");
+        let dotnet  = JwtConfig::new("dotnet-secret").validate_issuer(true);
+        let multi   = MultiJwtConfig::new([laravel.clone(), dotnet]);
+
+        let token = generate_jwt(1, &laravel).unwrap();
+        assert!(verify_jwt_any(&token, &multi).is_ok());
+    }
+
+    #[test]
+    fn multi_config_accepts_second_issuer() {
+        use crate::config::MultiJwtConfig;
+        let laravel = JwtConfig::laravel_compat("laravel-secret", "App\\Models\\User");
+        let dotnet  = JwtConfig::new("dotnet-secret");
+        let multi   = MultiJwtConfig::new([laravel, dotnet.clone()]);
+
+        let token = generate_jwt(2, &dotnet).unwrap();
+        assert!(verify_jwt_any(&token, &multi).is_ok());
+    }
+
+    #[test]
+    fn multi_config_rejects_unknown_issuer() {
+        use crate::config::MultiJwtConfig;
+        let laravel = JwtConfig::laravel_compat("laravel-secret", "App\\Models\\User");
+        let dotnet  = JwtConfig::new("dotnet-secret");
+        let multi   = MultiJwtConfig::new([laravel, dotnet]);
+
+        // Token signed with a completely different secret.
+        let other = JwtConfig::new("unknown-secret");
+        let token = generate_jwt(3, &other).unwrap();
+        assert!(verify_jwt_any(&token, &multi).is_err());
     }
 
     #[test]

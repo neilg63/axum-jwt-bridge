@@ -31,17 +31,8 @@ impl ProviderStrategy {
 
 /// Configuration for JWT encode/decode.
 ///
-/// This crate does **not** load `.env` files.  Ensure environment
-/// variables are set before calling [`from_env`](Self::from_env).
-///
-/// ## Expected env vars
-///
-/// | Variable           | Default                  |
-/// |--------------------|--------------------------|
-/// | `JWT_SECRET`       | *(required)*             |
-/// | `BASE_URL`         | `http://localhost:8000`  |
-/// | `AUTH_PATH`        | `/api/login`             |
-/// | `USER_MODEL_PATH`  | *(unset — no `prv` claim)* |
+/// Build with [`new`](Self::new), [`laravel_compat`](Self::laravel_compat),
+/// or [`from_env`](Self::from_env).  See `from_env` for supported env vars.
 #[derive(Debug, Clone)]
 pub struct JwtConfig {
     pub secret: String,
@@ -59,8 +50,8 @@ pub struct JwtConfig {
 impl JwtConfig {
     /// New config with framework-agnostic defaults (no `prv` claim).
     ///
-    /// For Laravel compatibility, chain `.provider(ProviderStrategy::laravel("App\\Models\\User"))`,
-    /// or use [`from_env`](Self::from_env) which reads `USER_MODEL_PATH`.
+    /// For Laravel compatibility use [`laravel_compat`](Self::laravel_compat)
+    /// or [`from_env`](Self::from_env) with `USER_MODEL_PATH` set.
     pub fn new(secret: impl Into<String>) -> Self {
         Self {
             secret: secret.into(),
@@ -74,10 +65,40 @@ impl JwtConfig {
         }
     }
 
+    /// Drop-in config for Laravel `tymon/jwt-auth` compatibility.
+    ///
+    /// Sets the `prv` claim to `sha1(model_class)` and enables its validation,
+    /// matching what `tymon/jwt-auth` issues and expects.  Use the same
+    /// `JWT_SECRET` as the Laravel application.
+    ///
+    /// ```rust
+    /// use axum_jwt_auth::{JwtConfig, ProviderStrategy};
+    ///
+    /// let config = JwtConfig::laravel_compat("your-jwt-secret", "App\\Models\\User");
+    /// // Optionally chain .validate_issuer(true) if BASE_URL / AUTH_PATH match.
+    /// ```
+    pub fn laravel_compat(
+        secret: impl Into<String>,
+        model_class: impl Into<String>,
+    ) -> Self {
+        Self::new(secret)
+            .provider(ProviderStrategy::laravel(model_class))
+            .validate_provider(true)
+    }
+
     /// Build from environment variables already set in the process.
     ///
-    /// The `prv` claim (Laravel provider hash) is only included when
-    /// `USER_MODEL_PATH` is explicitly set and non-empty.
+    /// | Variable              | Required | Default                 | Notes                                    |
+    /// |-----------------------|----------|-------------------------|------------------------------------------|
+    /// | `JWT_SECRET`          | **yes**  | —                       |                                          |
+    /// | `BASE_URL`            | no       | `http://localhost:8000` |                                          |
+    /// | `AUTH_PATH`           | no       | `/api/login`            |                                          |
+    /// | `JWT_TTL_DAYS`        | no       | `14`                    | Token lifetime in days                   |
+    /// | `USER_MODEL_PATH`     | no       | *(unset)*               | Sets `prv` and **enables** its validation|
+    /// | `JWT_VALIDATE_ISSUER` | no       | `false`                 | `true` or `1` to enable                 |
+    /// | `JWT_AUDIENCE`        | no       | *(unset)*               | Comma-separated; sets and validates `aud`|
+    ///
+    /// Setting `USER_MODEL_PATH` automatically enables `validate_provider`.
     pub fn from_env() -> Result<Self, AuthError> {
         let secret = std::env::var("JWT_SECRET")
             .map_err(|_| AuthError::ConfigError("JWT_SECRET is not set".into()))?;
@@ -87,20 +108,36 @@ impl JwtConfig {
         let auth_path =
             std::env::var("AUTH_PATH").unwrap_or_else(|_| "/api/login".into());
 
-        let provider = match std::env::var("USER_MODEL_PATH") {
-            Ok(class) if !class.is_empty() => ProviderStrategy::laravel(class),
-            _ => ProviderStrategy::None,
+        let ttl_days = std::env::var("JWT_TTL_DAYS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(14);
+
+        // Setting USER_MODEL_PATH implies you want the prv claim enforced.
+        let (provider, validate_provider) = match std::env::var("USER_MODEL_PATH") {
+            Ok(class) if !class.is_empty() => (ProviderStrategy::laravel(class), true),
+            _ => (ProviderStrategy::None, false),
         };
+
+        let validate_issuer = std::env::var("JWT_VALIDATE_ISSUER")
+            .map(|v| v == "true" || v == "1")
+            .unwrap_or(false);
+
+        // Comma-separated list, e.g. "https://api.example.com,https://admin.example.com"
+        let audience = std::env::var("JWT_AUDIENCE")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .map(|v| v.split(',').map(|s| s.trim().to_string()).collect());
 
         Ok(Self {
             secret,
             base_url,
             auth_path,
             provider,
-            ttl_days: 14,
-            validate_issuer: false,
-            validate_provider: false,
-            audience: None,
+            ttl_days,
+            validate_issuer,
+            validate_provider,
+            audience,
         })
     }
 
@@ -138,6 +175,40 @@ impl JwtConfig {
     pub fn audience(mut self, v: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.audience = Some(v.into_iter().map(Into::into).collect());
         self
+    }
+}
+
+/// An ordered list of [`JwtConfig`]s tried in sequence during verification.
+///
+/// Register as an Axum extension instead of (or alongside) a single
+/// `JwtConfig` to accept tokens from multiple issuers.
+///
+/// ```rust,no_run
+/// use axum::{routing::get, Extension, Router};
+/// use axum_jwt_auth::{AuthUser, JwtConfig, MultiJwtConfig};
+///
+/// # async fn handler(_: AuthUser) {}
+/// # async fn example() {
+/// let laravel = JwtConfig::laravel_compat("laravel-secret", "App\\Models\\User");
+/// let dotnet  = JwtConfig::new("dotnet-secret").validate_issuer(true);
+///
+/// let app: Router = Router::new()
+///     .route("/me", get(handler))
+///     .layer(Extension(MultiJwtConfig::new([laravel, dotnet])));
+/// # }
+/// ```
+#[derive(Debug, Clone)]
+pub struct MultiJwtConfig(Vec<JwtConfig>);
+
+impl MultiJwtConfig {
+    /// Create from any iterable of [`JwtConfig`]s.
+    pub fn new(configs: impl IntoIterator<Item = JwtConfig>) -> Self {
+        Self(configs.into_iter().collect())
+    }
+
+    /// Iterate over the contained configs.
+    pub fn iter(&self) -> impl Iterator<Item = &JwtConfig> {
+        self.0.iter()
     }
 }
 

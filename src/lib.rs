@@ -51,16 +51,38 @@
 //! # }
 //! ```
 //!
-//! ## Environment variables
+//! ## Environment variables (`JwtConfig::from_env`)
 //!
 //! This crate does **not** load `.env` files.
 //!
-//! | Variable           | Required | Default                  |
-//! |--------------------|----------|--------------------------|
-//! | `JWT_SECRET`       | **yes**  | —                        |
-//! | `BASE_URL`         | no       | `http://localhost:8000`  |
-//! | `AUTH_PATH`        | no       | `/api/login`             |
-//! | `USER_MODEL_PATH`  | no       | `App\Models\User`        |
+//! | Variable              | Required | Default                 | Notes                                     |
+//! |-----------------------|----------|-------------------------|-------------------------------------------|
+//! | `JWT_SECRET`          | **yes**  | —                       |                                           |
+//! | `BASE_URL`            | no       | `http://localhost:8000` |                                           |
+//! | `AUTH_PATH`           | no       | `/api/login`            |                                           |
+//! | `JWT_TTL_DAYS`        | no       | `14`                    | Token lifetime in days                    |
+//! | `USER_MODEL_PATH`     | no       | *(unset — no prv)*      | Sets `prv` claim and **enables** its check|
+//! | `JWT_VALIDATE_ISSUER` | no       | `false`                 | `true` or `1` to enable                  |
+//! | `JWT_AUDIENCE`        | no       | *(unset)*               | Comma-separated audience URIs             |
+//!
+//! ## Laravel migration
+//!
+//! To validate tokens still being issued by a Laravel `tymon/jwt-auth` server,
+//! share the same `JWT_SECRET` and set `USER_MODEL_PATH` (which auto-enables
+//! `prv` validation):
+//!
+//! ```rust,no_run
+//! use axum_jwt_auth::JwtConfig;
+//!
+//! // Code-based setup:
+//! let config = JwtConfig::laravel_compat("your-jwt-secret", "App\\Models\\User");
+//!
+//! // Or via environment (JWT_SECRET + USER_MODEL_PATH):
+//! let config = JwtConfig::from_env().unwrap();
+//! ```
+//!
+//! When your Rust services start issuing tokens too, the same config signs them
+//! with the same `prv` hash, so Laravel can validate them without any changes.
 
 pub mod claims;
 pub mod config;
@@ -69,7 +91,11 @@ pub mod middleware;
 pub mod token;
 
 pub use claims::{Claims, NoExtraClaims};
-pub use config::{JwtConfig, ProviderStrategy};
+pub use config::{JwtConfig, MultiJwtConfig, ProviderStrategy};
 pub use error::AuthError;
 pub use middleware::{AuthUser, OptionalAuthUser};
-pub use token::{generate_jti, generate_jwt, generate_jwt_with, verify_jwt, verify_jwt_as};
+pub use token::{
+    generate_jti, generate_jwt, generate_jwt_with,
+    verify_jwt, verify_jwt_as,
+    verify_jwt_any, verify_jwt_any_as,
+};
