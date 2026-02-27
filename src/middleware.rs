@@ -16,7 +16,7 @@ use crate::token::{verify_jwt_any_as, verify_jwt_as};
 ///
 /// ```rust,no_run
 /// use axum::{routing::get, Extension, Router};
-/// use crate::{AuthUser, JwtConfig};
+/// use axum_jwt_bridge::{AuthUser, JwtConfig};
 ///
 /// async fn handler(user: AuthUser) -> String {
 ///     format!("user_id = {}", user.user_id)
@@ -34,7 +34,7 @@ use crate::token::{verify_jwt_any_as, verify_jwt_as};
 ///
 /// ```rust,no_run
 /// use serde::Deserialize;
-/// use crate::AuthUser;
+/// use axum_jwt_bridge::AuthUser;
 ///
 /// #[derive(Debug, Clone, Deserialize)]
 /// struct MyExtra {

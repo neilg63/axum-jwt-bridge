@@ -10,7 +10,7 @@
 //!
 //! ```rust,no_run
 //! use axum::{routing::get, Extension, Router};
-//! use crate::{AuthUser, JwtConfig};
+//! use axum_jwt_bridge::{AuthUser, JwtConfig};
 //!
 //! async fn handler(user: AuthUser) -> String {
 //!     format!("user_id = {}", user.user_id)

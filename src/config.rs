@@ -72,7 +72,7 @@ impl JwtConfig {
     /// `JWT_SECRET` as the Laravel application.
     ///
     /// ```rust
-    /// use axum_jwt_auth::{JwtConfig, ProviderStrategy};
+    /// use axum_jwt_bridge::{JwtConfig, ProviderStrategy};
     ///
     /// let config = JwtConfig::laravel_compat("your-jwt-secret", "App\\Models\\User");
     /// // Optionally chain .validate_issuer(true) if BASE_URL / AUTH_PATH match.
@@ -185,7 +185,7 @@ impl JwtConfig {
 ///
 /// ```rust,no_run
 /// use axum::{routing::get, Extension, Router};
-/// use axum_jwt_auth::{AuthUser, JwtConfig, MultiJwtConfig};
+/// use axum_jwt_bridge::{AuthUser, JwtConfig, MultiJwtConfig};
 ///
 /// # async fn handler(_: AuthUser) {}
 /// # async fn example() {
