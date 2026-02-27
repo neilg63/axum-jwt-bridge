@@ -1,0 +1,19 @@
+[package]
+name = "axum-jwt-auth"
+version = "0.1.0"
+edition = "2024"
+description = "JWT encode/decode for Axum, compatible with Laravel's tymon/jwt-auth"
+license = "MIT"
+keywords = ["axum", "jwt", "authentication", "laravel"]
+
+[dependencies]
+jsonwebtoken = { version = "^10.3", features = ["rust_crypto"] }
+serde = { version = "1", features = ["derive"] }
+axum = "0.8"
+http = "1"
+sha1 = "0.10"
+rand = "0.10"
+thiserror = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }

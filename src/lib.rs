@@ -1,0 +1,75 @@
+//! # axum-jwt-auth
+//!
+//! JWT encode/decode for [Axum](https://docs.rs/axum) microservices,
+//! compatible with Laravel's `tymon/jwt-auth` and any HS256 JWT issuer.
+//!
+//! Extracts `user_id: u32` from the `sub` claim.  Role-based
+//! authorization is the consuming application's responsibility.
+//!
+//! ## Usage
+//!
+//! ```rust,no_run
+//! use axum::{routing::get, Extension, Router};
+//! use axum_jwt_auth::{AuthUser, JwtConfig};
+//!
+//! async fn handler(user: AuthUser) -> String {
+//!     format!("user_id = {}", user.user_id)
+//! }
+//!
+//! #[tokio::main]
+//! async fn main() {
+//!     // Ensure JWT_SECRET (and optionally BASE_URL, AUTH_PATH,
+//!     // USER_MODEL_PATH) are set in the environment before calling from_env.
+//!     let config = JwtConfig::from_env().unwrap();
+//!
+//!     let app: Router = Router::new()
+//!         .route("/me", get(handler))
+//!         .layer(Extension(config));
+//!
+//!     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+//!     axum::serve(listener, app).await.unwrap();
+//! }
+//! ```
+//!
+//! ## Custom extra claims
+//!
+//! ```rust
+//! use serde::{Deserialize, Serialize};
+//! use axum_jwt_auth::{Claims, verify_jwt_as, generate_jwt_with, JwtConfig};
+//!
+//! #[derive(Debug, Clone, Serialize, Deserialize)]
+//! struct MyExtra {
+//!     #[serde(default)]
+//!     tenant_id: Option<String>,
+//! }
+//!
+//! # fn example() {
+//! let config = JwtConfig::new("secret");
+//! let token = generate_jwt_with(42, &config, MyExtra { tenant_id: Some("acme".into()) }).unwrap();
+//! let claims: Claims<MyExtra> = verify_jwt_as(&token, &config).unwrap();
+//! assert_eq!(claims.extra.tenant_id.as_deref(), Some("acme"));
+//! # }
+//! ```
+//!
+//! ## Environment variables
+//!
+//! This crate does **not** load `.env` files.
+//!
+//! | Variable           | Required | Default                  |
+//! |--------------------|----------|--------------------------|
+//! | `JWT_SECRET`       | **yes**  | —                        |
+//! | `BASE_URL`         | no       | `http://localhost:8000`  |
+//! | `AUTH_PATH`        | no       | `/api/login`             |
+//! | `USER_MODEL_PATH`  | no       | `App\Models\User`        |
+
+pub mod claims;
+pub mod config;
+pub mod error;
+pub mod middleware;
+pub mod token;
+
+pub use claims::{Claims, NoExtraClaims};
+pub use config::{JwtConfig, ProviderStrategy};
+pub use error::AuthError;
+pub use middleware::{AuthUser, OptionalAuthUser};
+pub use token::{generate_jti, generate_jwt, generate_jwt_with, verify_jwt, verify_jwt_as};
