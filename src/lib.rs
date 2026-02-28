@@ -53,7 +53,7 @@
 //!
 //! ## Environment variables (`JwtConfig::from_env`)
 //!
-//! This crate does **not** load `.env` files.
+//! This Mod does **not** load `.env` files.
 //!
 //! | Variable              | Required | Default                 | Notes                                     |
 //! |-----------------------|----------|-------------------------|-------------------------------------------|

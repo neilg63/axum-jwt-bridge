@@ -6,6 +6,14 @@
 
 JWT encode/decode for [Axum](https://docs.rs/axum) microservices, compatible with any HS256 JWT issuer with an audience claim (`aud`) as well as Laravel's `tymon/jwt-auth` with a provider claim (`prv`). Supports accepting tokens from multiple issuers simultaneously.
 
+## Differences from `axum-jwt-auth`
+
+- `axum-jwt-bridge` is focused on interoperability and migration scenarios (notably Laravel `prv` compatibility and multi-issuer acceptance during transitions).
+- This crate can generate JWTs with standard registered claims (`iss`, `iat`, `exp`, `nbf`, `jti`, `sub`) plus optional `aud`/`prv`, while still prioritizing simple decode/extract middleware usage.
+- [`axum-jwt-auth`](https://crates.io/crates/axum-jwt-auth) also supports standard-claims workflows and includes additional features that may be useful depending on your auth model; review both crates for your project needs.
+
+
+
 Extracts `user_id: u32` from the `sub` claim. Role-based authorization is the consuming application's responsibility.
 
 ## Sample decoded token format
@@ -73,6 +81,10 @@ use axum_jwt_bridge::{JwtConfig, ProviderStrategy};
 let config = JwtConfig::new("my-secret");
 
 // Laravel tymon/jwt-auth compatible
+// Note: This Rust string literal decodes to runtime value: App\Models\User.
+// Keep runtime value aligned with your Laravel model class string.
+// See Troubleshooting for .env / Node / PHP escaping differences.
+// See the Troubleshooting section for details.
 let config = JwtConfig::laravel_compat("my-secret", "App\\Models\\User");
 
 // With audience claim (Auth0, Keycloak, Okta, etc.)
@@ -225,11 +237,65 @@ async fn main() {
 | Mix public + protected routes | Merge a protected sub-router |
 | Multi-issuer (migration) | `Extension(MultiJwtConfig)` + either pattern |
 
+## Troubleshooting
+
+### "Invalid provider hash" error
+
+If you're getting this error when verifying Laravel JWTs, the `prv` claim in your token doesn't match what this crate expects. This is usually due to **escaping differences between runtime values and source-code string literals**.
+
+For standard Laravel 8+ setups, the intended runtime model path is usually:
+
+```text
+App\Models\User
+```
+
+That same runtime value may appear differently depending on where you set it:
+
+- `.env`: `USER_MODEL_PATH=App\Models\User`
+- Rust source literal: `"App\\Models\\User"`
+- Node/JS source literal: `"App\\Models\\User"` (or `'App\\Models\\User'`)
+- Laravel/PHP quoted string: often written with escaped backslashes, but should evaluate to `App\Models\User`
+
+**Diagnose the issue:**
+
+```bash
+# Decode your JWT to see the actual prv value
+cargo run --example decode -- YOUR_JWT_TOKEN_HERE
+```
+
+**Hash mapping (for quick checks):**
+
+| Your JWT's `prv` hash | Runtime model path | Rust source literal |
+|----------------------|-------------------------|-----------|
+| `23bd5c8949f600adb39e701c400872db7a5976f7` | `App\Models\User` (Laravel 8+) | `"App\\Models\\User"` |
+| `3bb14b87c47aabc7635b62725877baa20182812f` | `App\\Models\\User` (double backslashes in runtime value) | `"App\\\\Models\\\\User"` |
+| `87e0af1ef9fd15812fdec97153a14e0b047546aa` | `App\User` (Laravel 5-7) | `"App\\User"` |
+
+**Important:** match on **runtime value**, not how it is escaped in source files.
+
+**How PHP quoting affects runtime value:**
+
+- PHP single-quoted: `'App\\Models\\User'` → runtime `App\\Models\\User`
+- PHP double-quoted: `"App\\Models\\User"` → runtime `App\Models\User`
+
+Check your Laravel `config/auth.php` to see how the model is configured, then adjust your Rust code accordingly.
+
+**Quick fix:** If you don't need the `prv` validation, disable it:
+
+```rust
+let config = JwtConfig::new("secret"); // no USER_MODEL_PATH or provider
+```
+
+This validates signature, expiry, and issuer but skips the provider hash check.
+
 ## CLI example
 
 ```bash
 JWT_SECRET=my-secret cargo run --example token -- generate 42
 JWT_SECRET=my-secret cargo run --example token -- verify eyJhbG...
+
+# Decode a JWT to inspect claims (no verification)
+cargo run --example decode -- eyJhbG...
 ```
 
 ## License

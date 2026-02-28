@@ -165,7 +165,10 @@ pub fn verify_jwt_as<E: DeserializeOwned>(
         if let Some(expected) = config.provider.compute() {
             match &claims.prv {
                 Some(prv) if *prv == expected => {}
-                _ => return Err(AuthError::InvalidProvider),
+                _ => return Err(AuthError::InvalidProvider(format!(
+                    "expected prv claim {:?}, got {:?}",
+                    expected, claims.prv
+                ))),
             }
         }
     }

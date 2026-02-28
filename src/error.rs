@@ -35,8 +35,8 @@ pub enum AuthError {
     #[error("Invalid audience")]
     InvalidAudience,
 
-    #[error("Invalid provider hash")]
-    InvalidProvider,
+    #[error("Invalid provider hash {0}")]
+    InvalidProvider(String),
 
     #[error("Invalid subject: {0}")]
     InvalidSubject(String),
