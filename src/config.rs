@@ -111,7 +111,7 @@ impl JwtConfig {
         let ttl_days = std::env::var("JWT_TTL_DAYS")
             .ok()
             .and_then(|v| v.parse().ok())
-            .unwrap_or(14);
+            .unwrap_or(3);
 
         // Setting USER_MODEL_PATH implies you want the prv claim enforced.
         let (provider, validate_provider) = match std::env::var("USER_MODEL_PATH") {
