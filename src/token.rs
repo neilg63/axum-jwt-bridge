@@ -1,4 +1,4 @@
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode, get_current_timestamp};
 use rand::RngExt;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -52,10 +52,7 @@ pub fn generate_jwt_with<E: Serialize>(
         return Err(AuthError::ConfigError("JWT secret must not be empty".into()));
     }
 
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("system clock before Unix epoch")
-        .as_secs() as i64;
+    let now = get_current_timestamp() as i64;
 
     let claims = Claims {
         iss: Some(config.issuer()),

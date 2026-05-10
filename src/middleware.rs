@@ -1,5 +1,6 @@
 use axum::extract::FromRequestParts;
 use http::request::Parts;
+use jsonwebtoken::get_current_timestamp;
 use serde::de::DeserializeOwned;
 
 use crate::claims::{Claims, NoExtraClaims};
@@ -94,6 +95,18 @@ where
             claims,
             token,
         })
+    }
+}
+
+impl AuthUser {
+    /// Returns the expiry timestamp.
+    pub fn expiry_ts(&self) -> i64 {
+        self.claims.exp
+    }
+
+    pub fn has_expired(&self) -> bool {
+        let current_ts = get_current_timestamp() as i64;
+        current_ts >= self.claims.exp
     }
 }
 

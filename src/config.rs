@@ -58,7 +58,7 @@ impl JwtConfig {
             base_url: "http://localhost:8000".into(),
             auth_path: "/api/login".into(),
             provider: ProviderStrategy::None,
-            ttl_days: 14,
+            ttl_days: 3,
             validate_issuer: false,
             validate_provider: false,
             audience: None,
@@ -93,7 +93,7 @@ impl JwtConfig {
     /// | `JWT_SECRET`          | **yes**  | —                       |                                          |
     /// | `BASE_URL`            | no       | `http://localhost:8000` |                                          |
     /// | `AUTH_PATH`           | no       | `/api/login`            |                                          |
-    /// | `JWT_TTL_DAYS`        | no       | `14`                    | Token lifetime in days                   |
+    /// | `JWT_TTL_DAYS`        | no       | `3`                    | Token lifetime in days                   |
     /// | `USER_MODEL_PATH`     | no       | *(unset)*               | Sets `prv` and **enables** its validation|
     /// | `JWT_VALIDATE_ISSUER` | no       | `false`                 | `true` or `1` to enable                 |
     /// | `JWT_AUDIENCE`        | no       | *(unset)*               | Comma-separated; sets and validates `aud`|
@@ -148,33 +148,34 @@ impl JwtConfig {
         format!("{base}/{path}")
     }
 
-    pub fn base_url(mut self, v: impl Into<String>) -> Self {
+    pub fn base_url(&mut self, v: impl Into<String>) -> Self {
         self.base_url = v.into();
-        self
+        self.to_owned()
     }
-    pub fn auth_path(mut self, v: impl Into<String>) -> Self {
+    pub fn auth_path(&mut self, v: impl Into<String>) -> Self {
         self.auth_path = v.into();
-        self
+        self.to_owned() 
     }
-    pub fn provider(mut self, v: ProviderStrategy) -> Self {
+    pub fn provider(&mut self, v: ProviderStrategy) -> Self {
         self.provider = v;
-        self
+        self.to_owned()
     }
     pub fn ttl_days(mut self, v: u64) -> Self {
         self.ttl_days = v;
         self
     }
-    pub fn validate_issuer(mut self, v: bool) -> Self {
+    pub fn validate_issuer(&mut self, v: bool) -> Self {
         self.validate_issuer = v;
-        self
+        self.to_owned()
     }
-    pub fn validate_provider(mut self, v: bool) -> Self {
+    pub fn validate_provider(&mut self, v: bool) -> Self {
         self.validate_provider = v;
-        self
+        self.to_owned()
+
     }
-    pub fn audience(mut self, v: impl IntoIterator<Item = impl Into<String>>) -> Self {
+    pub fn audience(&mut self, v: impl IntoIterator<Item = impl Into<String>>) -> Self {
         self.audience = Some(v.into_iter().map(Into::into).collect());
-        self
+        self.to_owned()
     }
 }
 
